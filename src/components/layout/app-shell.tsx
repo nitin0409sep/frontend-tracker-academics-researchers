@@ -1,7 +1,8 @@
-import { BarChart3, BookPlus, LibraryBig, Menu, Sparkles } from "lucide-react";
+import { BarChart3, BookPlus, LibraryBig, LogOut, Menu, Sparkles } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth";
 
 const navItems = [
   { to: "/", label: "Analytics", icon: BarChart3 },
@@ -11,6 +12,7 @@ const navItems = [
 
 export function AppShell() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { user, logout } = useAuth();
 
   return (
     <div className="min-h-screen text-foreground">
@@ -34,6 +36,7 @@ export function AppShell() {
               type="button"
               className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/10 lg:hidden"
               onClick={() => setMenuOpen((value) => !value)}
+              aria-label="Toggle navigation"
             >
               <Menu className="h-5 w-5" />
             </button>
@@ -61,18 +64,34 @@ export function AppShell() {
             ))}
           </nav>
 
-          <div className="mt-6 hidden rounded-[28px] border border-white/10 bg-white/10 p-5 lg:block">
-            <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-[#f1d8a6] text-slate-900">
-              <Sparkles className="h-5 w-5" />
+          <div className="mt-6 flex flex-col gap-4 lg:mt-auto lg:pt-6">
+            <div className="rounded-[28px] border border-white/10 bg-white/10 p-5">
+              <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-[#f1d8a6] text-slate-900">
+                <Sparkles className="h-5 w-5" />
+              </div>
+              <h2 className="text-lg font-semibold tracking-[-0.03em]">Research workflow</h2>
+              <p className="mt-2 text-sm leading-6 text-white/68">
+                A calm workspace for collecting papers, evaluating impact, and pushing reading toward completion.
+              </p>
             </div>
-            <h2 className="text-lg font-semibold tracking-[-0.03em]">Research workflow</h2>
-            <p className="mt-2 text-sm leading-6 text-white/68">
-              A calm workspace for collecting papers, evaluating impact, and pushing reading toward completion.
-            </p>
+
+            <div className="rounded-[24px] border border-white/10 bg-white/8 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/55">Signed in as</p>
+              <p className="mt-2 truncate text-sm font-medium text-white">{user?.fullName}</p>
+              <p className="truncate text-xs text-white/65">{user?.email}</p>
+              <button
+                type="button"
+                onClick={logout}
+                className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/14 bg-white/10 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white/16"
+              >
+                <LogOut className="h-4 w-4" />
+                Sign out
+              </button>
+            </div>
           </div>
         </aside>
 
-        <main className="app-shell-main app-scrollbar relative min-w-0 flex-1 overflow-x-hidden overflow-y-auto rounded-[34px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.7),rgba(255,255,255,0.45))] px-4 py-6 shadow-panel backdrop-blur sm:px-6 lg:px-10 lg:py-10 lg:max-h-[calc(100vh-2.5rem)]">
+        <main className="app-shell-main app-scrollbar relative min-w-0 flex-1 overflow-x-hidden overflow-y-auto rounded-[34px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.7),rgba(255,255,255,0.45))] px-4 py-6 shadow-panel backdrop-blur sm:px-6 lg:max-h-[calc(100vh-2.5rem)] lg:px-10 lg:py-10">
           <Outlet />
         </main>
       </div>

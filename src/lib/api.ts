@@ -1,14 +1,82 @@
-import type { AnalyticsResponse, Paper, PaperFilters } from "./types";
+import type { AnalyticsResponse, AuthResponse, Paper, PaperFilters } from "./types";
 
-const apiBaseUrl = import.meta.env.VITE_API_URL ?? "http://localhost:4000/api";
+const rawApiBaseUrl = import.meta.env.VITE_API_URL ?? "http://localhost:4000/api";
+const apiBaseUrl = normalizeApiBaseUrl(rawApiBaseUrl);
+const REQUEST_TIMEOUT_MS = 10000;
+
+let authToken: string | null = null;
+let unauthorizedHandler: (() => void) | null = null;
+
+export function setApiAuthToken(token: string | null) {
+  authToken = token;
+}
+
+export function setUnauthorizedHandler(handler: (() => void) | null) {
+  unauthorizedHandler = handler;
+}
 
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const payload = (await response.json().catch(() => null)) as { message?: string } | null;
+
+    if (response.status === 401) {
+      unauthorizedHandler?.();
+    }
+
     throw new Error(payload?.message ?? "Something went wrong");
   }
 
   return response.json() as Promise<T>;
+}
+
+async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(`${apiBaseUrl}${path}`, {
+      ...init,
+      headers: {
+        Accept: "application/json",
+        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+        ...(init?.headers ?? {})
+      },
+      cache: "no-store",
+      credentials: "omit",
+      referrerPolicy: "strict-origin-when-cross-origin",
+      signal: controller.signal
+    });
+
+    return handleResponse<T>(response);
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error("Request timed out. Please try again.");
+    }
+
+    throw error;
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
+
+export async function signUp(payload: { fullName: string; email: string; password: string }): Promise<AuthResponse> {
+  return apiFetch<AuthResponse>("/auth/signup", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function signIn(payload: { email: string; password: string }): Promise<AuthResponse> {
+  return apiFetch<AuthResponse>("/auth/login", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
 }
 
 export async function fetchPapers(filters: PaperFilters): Promise<Paper[]> {
@@ -19,23 +87,35 @@ export async function fetchPapers(filters: PaperFilters): Promise<Paper[]> {
   filters.impactScore.forEach((value) => params.append("impactScore", value));
   params.set("dateRangePreset", filters.dateRangePreset);
 
-  const response = await fetch(`${apiBaseUrl}/papers?${params.toString()}`);
-  return handleResponse<Paper[]>(response);
+  return apiFetch<Paper[]>(`/papers?${params.toString()}`);
 }
 
 export async function createPaper(payload: Omit<Paper, "id" | "createdAt">): Promise<Paper> {
-  const response = await fetch(`${apiBaseUrl}/papers`, {
+  return apiFetch<Paper>("/papers", {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
     },
     body: JSON.stringify(payload)
   });
-
-  return handleResponse<Paper>(response);
 }
 
 export async function fetchAnalytics(): Promise<AnalyticsResponse> {
-  const response = await fetch(`${apiBaseUrl}/analytics`);
-  return handleResponse<AnalyticsResponse>(response);
+  return apiFetch<AnalyticsResponse>("/analytics");
+}
+
+function normalizeApiBaseUrl(value: string) {
+  let url: URL;
+
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error("VITE_API_URL must be a valid absolute URL");
+  }
+
+  if (!["http:", "https:"].includes(url.protocol)) {
+    throw new Error("VITE_API_URL must use http or https");
+  }
+
+  return url.toString().replace(/\/$/, "");
 }

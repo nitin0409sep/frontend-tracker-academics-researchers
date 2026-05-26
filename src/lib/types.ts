@@ -1,5 +1,16 @@
 import type { DatePreset, ImpactScore, ReadingStage, ResearchDomain } from "./constants";
 
+export type User = {
+  id: number;
+  fullName: string;
+  email: string;
+};
+
+export type AuthResponse = {
+  token: string;
+  user: User;
+};
+
 export type Paper = {
   id: number;
   paperTitle: string;
