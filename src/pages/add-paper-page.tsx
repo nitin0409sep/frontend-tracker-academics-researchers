@@ -1,16 +1,17 @@
-import type { ReactNode } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { forwardRef, type ReactNode } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { CalendarDays, CheckCircle2, Loader2 } from "lucide-react";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 import { createPaper } from "@/lib/api";
 import { impactScores, readingStages, researchDomains } from "@/lib/constants";
 import { SectionHeading } from "@/components/section-heading";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 
@@ -25,22 +26,6 @@ const schema = z.object({
 });
 
 type FormValues = z.infer<typeof schema>;
-
-const weekdayLabels = ["S", "M", "T", "W", "T", "F", "S"];
-const monthLabels = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December"
-];
 
 export function AddPaperPage() {
   const { pushToast } = useToast();
@@ -117,45 +102,75 @@ export function AddPaperPage() {
             </Field>
 
             <Field label="Research Domain" error={errors.researchDomain?.message}>
-              <Select
-                aria-invalid={Boolean(errors.researchDomain)}
-                className={fieldClassName(Boolean(errors.researchDomain))}
-                {...register("researchDomain")}
-              >
-                {researchDomains.map((domain) => (
-                  <option key={domain} value={domain}>
-                    {domain}
-                  </option>
-                ))}
-              </Select>
+              <Controller
+                control={control}
+                name="researchDomain"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger
+                      aria-invalid={Boolean(errors.researchDomain)}
+                      className={fieldClassName(Boolean(errors.researchDomain))}
+                    >
+                      <SelectValue placeholder="Select domain" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {researchDomains.map((domain) => (
+                        <SelectItem key={domain} value={domain}>
+                          {domain}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             </Field>
 
             <Field label="Reading Stage" error={errors.readingStage?.message}>
-              <Select
-                aria-invalid={Boolean(errors.readingStage)}
-                className={fieldClassName(Boolean(errors.readingStage))}
-                {...register("readingStage")}
-              >
-                {readingStages.map((stage) => (
-                  <option key={stage} value={stage}>
-                    {stage}
-                  </option>
-                ))}
-              </Select>
+              <Controller
+                control={control}
+                name="readingStage"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger
+                      aria-invalid={Boolean(errors.readingStage)}
+                      className={fieldClassName(Boolean(errors.readingStage))}
+                    >
+                      <SelectValue placeholder="Select stage" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {readingStages.map((stage) => (
+                        <SelectItem key={stage} value={stage}>
+                          {stage}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             </Field>
 
             <Field label="Impact Score" error={errors.impactScore?.message}>
-              <Select
-                aria-invalid={Boolean(errors.impactScore)}
-                className={fieldClassName(Boolean(errors.impactScore))}
-                {...register("impactScore")}
-              >
-                {impactScores.map((score) => (
-                  <option key={score} value={score}>
-                    {score}
-                  </option>
-                ))}
-              </Select>
+              <Controller
+                control={control}
+                name="impactScore"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger
+                      aria-invalid={Boolean(errors.impactScore)}
+                      className={fieldClassName(Boolean(errors.impactScore))}
+                    >
+                      <SelectValue placeholder="Select impact" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {impactScores.map((score) => (
+                        <SelectItem key={score} value={score}>
+                          {score}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             </Field>
 
             <Field label="Date Added" error={errors.dateAdded?.message}>
@@ -217,178 +232,95 @@ function DatePickerField({
   onChange: (value: string) => void;
   hasError: boolean;
 }) {
-  const rootRef = useRef<HTMLDivElement | null>(null);
-  const selectedDate = value ? parseLocalDate(value) : getTodayLocalDate();
-  const [isOpen, setIsOpen] = useState(false);
-  const [visibleMonth, setVisibleMonth] = useState(() => startOfMonth(selectedDate));
-
-  useEffect(() => {
-    setVisibleMonth(startOfMonth(selectedDate));
-  }, [value]);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    }
-
-    function handleEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setIsOpen(false);
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("keydown", handleEscape);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, []);
-
-  const calendarDays = useMemo(() => buildCalendarDays(visibleMonth), [visibleMonth]);
-
   return (
-    <div className="relative" ref={rootRef}>
-      <button
-        type="button"
-        onClick={() => setIsOpen((current) => !current)}
-        className={cn(
-          "flex h-12 w-full items-center justify-between rounded-2xl border bg-white px-4 py-2 text-left text-sm text-foreground shadow-sm outline-none transition hover:border-primary/40 focus:border-primary focus:ring-2 focus:ring-primary/20",
-          hasError ? "border-rose-300 ring-2 ring-rose-100" : "border-border"
-        )}
-      >
-        <div className="flex min-w-0 items-center gap-3">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#eef4f2] text-primary">
-            <CalendarDays className="h-4 w-4" />
-          </span>
-          <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Selected date</p>
-            <p className="truncate text-sm font-medium text-foreground">{formatDisplayDate(value)}</p>
+    <DatePicker
+      selected={parseLocalDate(value)}
+      onChange={(date) => {
+        if (date) {
+          onChange(toDateInputValue(date));
+        }
+      }}
+      dateFormat="yyyy-MM-dd"
+      calendarClassName="research-datepicker"
+      popperClassName="research-datepicker-popper"
+      wrapperClassName="block w-full"
+      renderCustomHeader={({ date, decreaseMonth, increaseMonth, prevMonthButtonDisabled, nextMonthButtonDisabled }) => (
+        <div className="research-datepicker-header">
+          <button
+            type="button"
+            onClick={decreaseMonth}
+            disabled={prevMonthButtonDisabled}
+            className="research-datepicker-nav"
+          >
+            <span aria-hidden="true">&#8249;</span>
+          </button>
+          <div className="research-datepicker-heading">
+            <span className="research-datepicker-eyebrow">Calendar</span>
+            <span className="research-datepicker-title">{formatMonthYear(date)}</span>
           </div>
+          <button
+            type="button"
+            onClick={increaseMonth}
+            disabled={nextMonthButtonDisabled}
+            className="research-datepicker-nav"
+          >
+            <span aria-hidden="true">&#8250;</span>
+          </button>
         </div>
-        <span className="shrink-0 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Pick</span>
-      </button>
-
-      {isOpen ? (
-        <div className="absolute left-0 right-0 top-[calc(100%+0.75rem)] z-30 rounded-[28px] border border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(245,248,247,0.96))] p-4 shadow-[0_22px_60px_rgba(16,37,46,0.18)] backdrop-blur sm:left-auto sm:right-0 sm:w-[340px]">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={() => setVisibleMonth((current) => addMonths(current, -1))}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#d7e1e5] bg-white/80 text-slate-700 transition hover:bg-[#f3f8f6]"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <div className="min-w-0 text-center">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Calendar</p>
-              <p className="mt-1 text-lg font-semibold tracking-[-0.03em] text-foreground">
-                {monthLabels[visibleMonth.getMonth()]} {visibleMonth.getFullYear()}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setVisibleMonth((current) => addMonths(current, 1))}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#d7e1e5] bg-white/80 text-slate-700 transition hover:bg-[#f3f8f6]"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-
-          <div className="mb-2 grid grid-cols-7 gap-2 px-1">
-            {weekdayLabels.map((label) => (
-              <div key={label} className="py-2 text-center text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                {label}
-              </div>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-7 gap-2">
-            {calendarDays.map((day) => {
-              const isSelected = day.dateString === value;
-              const isCurrentMonth = day.date.getMonth() === visibleMonth.getMonth();
-              const isToday = day.dateString === toDateInputValue(getTodayLocalDate());
-
-              return (
-                <button
-                  key={day.dateString}
-                  type="button"
-                  onClick={() => {
-                    onChange(day.dateString);
-                    setIsOpen(false);
-                  }}
-                  className={cn(
-                    "flex h-10 items-center justify-center rounded-2xl text-sm font-medium transition",
-                    isSelected
-                      ? "bg-primary text-white shadow-soft"
-                      : isCurrentMonth
-                        ? "text-foreground hover:bg-[#eef5f3]"
-                        : "text-slate-400 hover:bg-[#f5f7f6]",
-                    isToday && !isSelected ? "border border-primary/25" : "border border-transparent"
-                  )}
-                >
-                  {day.date.getDate()}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="mt-4 flex items-center justify-between border-t border-[#e3eaed] pt-4">
-            <button
-              type="button"
-              onClick={() => {
-                const today = getTodayLocalDate();
-                onChange(toDateInputValue(today));
-                setVisibleMonth(startOfMonth(today));
-                setIsOpen(false);
-              }}
-              className="text-sm font-medium text-primary transition hover:text-primary/80"
-            >
-              Today
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsOpen(false)}
-              className="rounded-full border border-[#d7e1e5] bg-white/80 px-4 py-2 text-sm font-medium text-foreground transition hover:bg-[#f3f8f6]"
-            >
-              Done
-            </button>
-          </div>
-        </div>
-      ) : null}
-    </div>
+      )}
+      dayClassName={(date) =>
+        cn(
+          "research-datepicker-day",
+          isSameDay(date, parseLocalDate(value)) && "is-selected",
+          isSameDay(date, getTodayLocalDate()) && !isSameDay(date, parseLocalDate(value)) && "is-today",
+          date.getMonth() !== parseLocalDate(value).getMonth() && "is-outside"
+        )
+      }
+      customInput={<DatePickerTrigger hasError={hasError} value={value} />}
+    />
   );
 }
 
-function buildCalendarDays(month: Date) {
-  const year = month.getFullYear();
-  const monthIndex = month.getMonth();
-  const firstDay = new Date(year, monthIndex, 1);
-  const startOffset = firstDay.getDay();
-  const startDate = new Date(year, monthIndex, 1 - startOffset);
+const DatePickerTrigger = forwardRef<HTMLButtonElement, { value?: string; onClick?: () => void; hasError: boolean }>(
+  ({ value = "", onClick, hasError }, ref) => (
+    <button
+      ref={ref}
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "group flex h-14 w-full items-center justify-between rounded-[22px] border bg-[linear-gradient(180deg,#ffffff,rgba(247,250,249,0.98))] px-4 py-3 text-left shadow-[0_10px_26px_rgba(23,52,64,0.08)] outline-none transition hover:border-primary/35 hover:shadow-[0_14px_30px_rgba(23,52,64,0.12)] focus:border-primary focus:ring-2 focus:ring-primary/15",
+        hasError ? "border-rose-300 ring-2 ring-rose-100" : "border-[#d8e1e3]"
+      )}
+    >
+      <div className="flex min-w-0 items-center gap-3">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[#edf5f3] text-primary transition group-hover:bg-[#e4efeb]">
+          <CalendarDays className="h-4 w-4" />
+        </span>
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">Date</p>
+          <p className="mt-0.5 truncate text-[15px] font-semibold tracking-[-0.02em] text-foreground">{formatDisplayDate(value)}</p>
+        </div>
+      </div>
+      <span className="rounded-full border border-[#d9e3e5] bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500 transition group-hover:border-primary/20 group-hover:text-primary">
+        Pick
+      </span>
+    </button>
+  )
+);
 
-  return Array.from({ length: 42 }, (_, index) => {
-    const date = new Date(startDate);
-    date.setDate(startDate.getDate() + index);
-    return {
-      date,
-      dateString: toDateInputValue(date)
-    };
-  });
-}
-
-function startOfMonth(date: Date) {
-  return new Date(date.getFullYear(), date.getMonth(), 1);
-}
-
-function addMonths(date: Date, amount: number) {
-  return new Date(date.getFullYear(), date.getMonth() + amount, 1);
-}
+DatePickerTrigger.displayName = "DatePickerTrigger";
 
 function parseLocalDate(value: string) {
   const [year, month, day] = value.split("-").map(Number);
   return new Date(year, month - 1, day);
+}
+
+function isSameDay(left: Date, right: Date) {
+  return (
+    left.getFullYear() === right.getFullYear() &&
+    left.getMonth() === right.getMonth() &&
+    left.getDate() === right.getDate()
+  );
 }
 
 function getTodayLocalDate() {
@@ -401,6 +333,10 @@ function toDateInputValue(date: Date) {
   const month = `${date.getMonth() + 1}`.padStart(2, "0");
   const day = `${date.getDate()}`.padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function formatMonthYear(date: Date) {
+  return `${date.toLocaleString("en-US", { month: "long" })} ${date.getFullYear()}`;
 }
 
 function formatDisplayDate(value: string) {
