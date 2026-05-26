@@ -1,5 +1,13 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { signIn, signUp, setApiAuthToken, setUnauthorizedHandler } from "./api";
+import {
+  logoutSession,
+  refreshSession,
+  setApiAuthToken,
+  setRefreshHandler,
+  setUnauthorizedHandler,
+  signIn,
+  signUp
+} from "./api";
 import type { User } from "./types";
 
 type AuthContextValue = {
@@ -8,11 +16,12 @@ type AuthContextValue = {
   isReady: boolean;
   login: (input: { email: string; password: string }) => Promise<void>;
   signup: (input: { fullName: string; email: string; password: string }) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 };
 
 type StoredSession = {
   token: string;
+  refreshToken: string;
   user: User;
 };
 
@@ -20,16 +29,16 @@ const STORAGE_KEY = "research-paper-tracker-session";
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<StoredSession | null>(null);
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (raw) {
       try {
-        const session = JSON.parse(raw) as StoredSession;
-        setUser(session.user);
-        setApiAuthToken(session.token);
+        const nextSession = JSON.parse(raw) as StoredSession;
+        setSession(nextSession);
+        setApiAuthToken(nextSession.token);
       } catch {
         window.localStorage.removeItem(STORAGE_KEY);
       }
@@ -38,49 +47,78 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    setUnauthorizedHandler(logout);
-    return () => setUnauthorizedHandler(null);
-  }, []);
+    setUnauthorizedHandler(() => {
+      void clearSessionLocally();
+    });
+    setRefreshHandler(handleRefresh);
+    return () => {
+      setUnauthorizedHandler(null);
+      setRefreshHandler(null);
+    };
+  }, [session]);
 
   async function login(input: { email: string; password: string }) {
     const auth = await signIn(input);
-    persistSession(auth.token, auth.user);
-    setUser(auth.user);
+    persistSession(auth.token, auth.refreshToken, auth.user);
   }
 
   async function signup(input: { fullName: string; email: string; password: string }) {
     const auth = await signUp(input);
-    persistSession(auth.token, auth.user);
-    setUser(auth.user);
+    persistSession(auth.token, auth.refreshToken, auth.user);
   }
 
-  function logout() {
+  async function logout() {
+    const refreshToken = session?.refreshToken;
+    await clearSessionLocally();
+
+    if (refreshToken) {
+      try {
+        await logoutSession({ refreshToken });
+      } catch {
+        // Local sign-out takes priority if the network is unavailable.
+      }
+    }
+  }
+
+  async function handleRefresh() {
+    if (!session?.refreshToken) {
+      await clearSessionLocally();
+      return null;
+    }
+
+    try {
+      const auth = await refreshSession({ refreshToken: session.refreshToken });
+      persistSession(auth.token, auth.refreshToken, auth.user);
+      return auth.token;
+    } catch {
+      await clearSessionLocally();
+      return null;
+    }
+  }
+
+  async function clearSessionLocally() {
     window.localStorage.removeItem(STORAGE_KEY);
     setApiAuthToken(null);
-    setUser(null);
+    setSession(null);
   }
 
-  function persistSession(token: string, nextUser: User) {
+  function persistSession(token: string, refreshToken: string, user: User) {
+    const nextSession = { token, refreshToken, user };
     setApiAuthToken(token);
-    window.localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({
-        token,
-        user: nextUser
-      })
-    );
+    setSession(nextSession);
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSession));
   }
 
   const value = useMemo(
     () => ({
-      user,
-      isAuthenticated: Boolean(user),
+      user: session?.user ?? null,
+      isAuthenticated: Boolean(session?.user),
       isReady,
       login,
       signup,
       logout
     }),
-    [user, isReady]
+    [session, isReady]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

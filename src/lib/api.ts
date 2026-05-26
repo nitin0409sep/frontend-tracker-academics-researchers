@@ -6,6 +6,7 @@ const REQUEST_TIMEOUT_MS = 10000;
 
 let authToken: string | null = null;
 let unauthorizedHandler: (() => void) | null = null;
+let refreshHandler: (() => Promise<string | null>) | null = null;
 
 export function setApiAuthToken(token: string | null) {
   authToken = token;
@@ -15,21 +16,20 @@ export function setUnauthorizedHandler(handler: (() => void) | null) {
   unauthorizedHandler = handler;
 }
 
+export function setRefreshHandler(handler: (() => Promise<string | null>) | null) {
+  refreshHandler = handler;
+}
+
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const payload = (await response.json().catch(() => null)) as { message?: string } | null;
-
-    if (response.status === 401) {
-      unauthorizedHandler?.();
-    }
-
     throw new Error(payload?.message ?? "Something went wrong");
   }
 
   return response.json() as Promise<T>;
 }
 
-async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+async function apiFetch<T>(path: string, init?: RequestInit, hasRetried = false): Promise<T> {
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
@@ -46,6 +46,17 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
       referrerPolicy: "strict-origin-when-cross-origin",
       signal: controller.signal
     });
+
+    if (response.status === 401 && !hasRetried && refreshHandler) {
+      const refreshedToken = await refreshHandler();
+      if (refreshedToken) {
+        return apiFetch<T>(path, init, true);
+      }
+    }
+
+    if (response.status === 401) {
+      unauthorizedHandler?.();
+    }
 
     return handleResponse<T>(response);
   } catch (error) {
@@ -77,6 +88,26 @@ export async function signIn(payload: { email: string; password: string }): Prom
     },
     body: JSON.stringify(payload)
   });
+}
+
+export async function refreshSession(payload: { refreshToken: string }): Promise<AuthResponse> {
+  return apiFetch<AuthResponse>("/auth/refresh", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  }, true);
+}
+
+export async function logoutSession(payload: { refreshToken: string }) {
+  await apiFetch<null>("/auth/logout", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  }, true);
 }
 
 export async function fetchPapers(filters: PaperFilters): Promise<Paper[]> {
@@ -116,6 +147,9 @@ function normalizeApiBaseUrl(value: string) {
   if (!["http:", "https:"].includes(url.protocol)) {
     throw new Error("VITE_API_URL must use http or https");
   }
+
+  const normalizedPath = url.pathname === "/" ? "/api" : url.pathname.replace(/\/$/, "");
+  url.pathname = normalizedPath.endsWith("/api") ? normalizedPath : `${normalizedPath}/api`;
 
   return url.toString().replace(/\/$/, "");
 }
