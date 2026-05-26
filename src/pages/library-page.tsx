@@ -1,5 +1,6 @@
 import { SlidersHorizontal, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { EmptyState } from "@/components/empty-state";
 import { FiltersPanel, getActiveFilterCount } from "@/components/library/filters-panel";
 import { PaperTable } from "@/components/library/paper-table";
@@ -91,29 +92,40 @@ export function LibraryPage() {
         </div>
       </div>
 
-      {isFilterSheetOpen ? (
-        <div className="fixed inset-0 z-50 flex items-end overflow-hidden bg-slate-950/40 backdrop-blur-[2px]" onClick={() => setIsFilterSheetOpen(false)}>
-          <div
-            className="w-full rounded-t-[32px] border border-white/80 bg-[linear-gradient(180deg,rgba(250,251,250,0.98),rgba(243,247,246,0.98))] p-5 shadow-[0_-20px_60px_rgba(16,37,46,0.18)] sm:max-h-[88vh] sm:px-6 lg:px-8"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="mx-auto mb-4 h-1.5 w-14 rounded-full bg-slate-300" />
-            <div className="mb-5 flex items-center justify-between">
-              <p className="text-lg font-semibold tracking-[-0.03em] text-foreground">Library Filters</p>
-              <button
-                type="button"
-                onClick={() => setIsFilterSheetOpen(false)}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#dce4e7] bg-white/90 text-slate-600 transition hover:bg-slate-50 hover:text-foreground"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="app-scrollbar max-h-[78vh] overflow-y-auto pr-1 sm:max-h-[72vh]">
-              <FiltersPanel filters={filters} onChange={setFilters} onClose={() => setIsFilterSheetOpen(false)} />
-            </div>
-          </div>
-        </div>
-      ) : null}
+      {isFilterSheetOpen
+        ? createPortal(
+            <div
+              className="fixed inset-0 z-[100] bg-slate-950/40 backdrop-blur-[2px]"
+              onClick={() => setIsFilterSheetOpen(false)}
+            >
+              <div className="absolute inset-x-0 bottom-0 flex justify-center px-2 pb-2 sm:px-4 sm:pb-4">
+                <div
+                  className="flex h-[82dvh] w-full max-w-5xl flex-col overflow-hidden rounded-t-[32px] border border-white/80 bg-[linear-gradient(180deg,rgba(250,251,250,0.98),rgba(243,247,246,0.98))] shadow-[0_-20px_60px_rgba(16,37,46,0.18)] sm:h-[76dvh] sm:rounded-[32px]"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <div className="shrink-0 px-5 pb-4 pt-3 sm:px-6 lg:px-8">
+                    <div className="mx-auto mb-4 h-1.5 w-14 rounded-full bg-slate-300" />
+                    <div className="flex items-center justify-between">
+                      <p className="text-lg font-semibold tracking-[-0.03em] text-foreground">Library Filters</p>
+                      <button
+                        type="button"
+                        onClick={() => setIsFilterSheetOpen(false)}
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#dce4e7] bg-white/90 text-slate-600 transition hover:bg-slate-50 hover:text-foreground"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="app-scrollbar min-h-0 flex-1 overflow-y-auto px-5 pb-5 sm:px-6 sm:pb-6 lg:px-8 lg:pb-8">
+                    <FiltersPanel filters={filters} onChange={setFilters} onClose={() => setIsFilterSheetOpen(false)} />
+                  </div>
+                </div>
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
     </>
   );
 }
