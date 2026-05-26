@@ -1,4 +1,4 @@
-import type { Config } from "tailwindcss";
+import type { Config } from "tailwindcss"
 
 export default {
   darkMode: ["class"],
@@ -49,10 +49,9 @@ export default {
         soft: "0 10px 35px rgba(14, 30, 55, 0.06)"
       },
       backgroundImage: {
-        "paper-grid":
-          "radial-gradient(circle at 1px 1px, rgba(21,36,62,0.08) 1px, transparent 0)"
+        "paper-grid": "radial-gradient(circle at 1px 1px, rgba(21,36,62,0.08) 1px, transparent 0)"
       }
     }
   },
   plugins: []
-} satisfies Config;
+} satisfies Config

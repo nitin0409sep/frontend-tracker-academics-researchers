@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title>Research Paper Reading Tracker</title>
+  <desc>Stylized paper sheet with bookmark accent on a rounded teal background.</desc>
+  <defs>
+    <linearGradient id="bg" x1="8" y1="6" x2="56" y2="58" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#194856" />
+      <stop offset="1" stop-color="#2d6670" />
+    </linearGradient>
+    <linearGradient id="paper" x1="18" y1="12" x2="44" y2="52" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fffdf7" />
+      <stop offset="1" stop-color="#f2eee3" />
+    </linearGradient>
+    <linearGradient id="bookmark" x1="43" y1="12" x2="52" y2="26" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#e9c88f" />
+      <stop offset="1" stop-color="#d89d52" />
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="56" height="56" rx="18" fill="url(#bg)" />
+  <path d="M21 12h22l7 7v25a8 8 0 0 1-8 8H21a8 8 0 0 1-8-8V20a8 8 0 0 1 8-8Z" fill="url(#paper)" />
+  <path d="M43 12v11a4 4 0 0 0 4 4h10" fill="#efe7d5" />
+  <path d="M43 12h9v16l-4.5-3.5L43 28V12Z" fill="url(#bookmark)" />
+  <rect x="21" y="27" width="19" height="3.5" rx="1.75" fill="#194856" opacity="0.9" />
+  <rect x="21" y="34" width="22" height="3.5" rx="1.75" fill="#5b7f86" opacity="0.95" />
+  <rect x="21" y="41" width="15" height="3.5" rx="1.75" fill="#d6b27b" opacity="0.95" />
+</svg>
