@@ -37,19 +37,32 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     { className, variant, size, asChild = false, loading = false, disabled, children, ...props },
     ref
   ) => {
-    const Comp = asChild ? Slot : "button"
     const isDisabled = disabled || loading
+    const classNames = cn(buttonVariants({ variant, size }), className)
+
+    if (asChild) {
+      return (
+        <Slot
+          ref={ref}
+          className={classNames}
+          aria-disabled={isDisabled || undefined}
+          {...props}
+        >
+          {children}
+        </Slot>
+      )
+    }
 
     return (
-      <Comp
+      <button
         ref={ref}
-        className={cn(buttonVariants({ variant, size }), className)}
-        {...(!asChild ? { disabled: isDisabled } : {})}
+        className={classNames}
+        disabled={isDisabled}
         {...props}
       >
         {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" /> : null}
         {children}
-      </Comp>
+      </button>
     )
   }
 )
