@@ -46,6 +46,16 @@ export function AuthPage() {
 
   const isSignup = mode === "signup"
 
+  function switchMode(nextMode: "login" | "signup") {
+    if (nextMode === mode) {
+      return
+    }
+
+    signupForm.reset()
+    loginForm.reset()
+    setMode(nextMode)
+  }
+
   async function handleSignup(values: SignupValues) {
     try {
       await signup(values)
@@ -107,7 +117,7 @@ export function AuthPage() {
           <div className="mb-6 flex gap-2 rounded-full border border-[#dce4e7] bg-[#f6faf8] p-1">
             <button
               type="button"
-              onClick={() => setMode("signup")}
+              onClick={() => switchMode("signup")}
               className={cn(
                 "flex-1 rounded-full px-4 py-2 text-sm font-medium transition",
                 isSignup ? "bg-primary text-white" : "text-slate-600"
@@ -117,7 +127,7 @@ export function AuthPage() {
             </button>
             <button
               type="button"
-              onClick={() => setMode("login")}
+              onClick={() => switchMode("login")}
               className={cn(
                 "flex-1 rounded-full px-4 py-2 text-sm font-medium transition",
                 !isSignup ? "bg-primary text-white" : "text-slate-600"
