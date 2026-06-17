@@ -1,5 +1,5 @@
 import { Suspense, lazy } from "react"
-import { Navigate, Outlet, Route, Routes } from "react-router-dom"
+import { Navigate, Outlet, RouterProvider, createBrowserRouter } from "react-router-dom"
 import { AppShell } from "@/shared/components/layout/app-shell"
 import { useAuth } from "@/features/auth/lib/auth-context"
 
@@ -20,8 +20,50 @@ const LibraryPage = lazy(() =>
   import("@/features/papers/pages/library-page").then((module) => ({ default: module.LibraryPage }))
 )
 
+const router = createBrowserRouter([
+  {
+    element: <AuthReadyLayout />,
+    children: [
+      {
+        path: "/auth",
+        element: <AuthRoute />
+      },
+      {
+        element: <ProtectedLayout />,
+        children: [
+          {
+            element: <AppShell />,
+            children: [
+              {
+                index: true,
+                element: <AnalyticsPage />
+              },
+              {
+                path: "library",
+                element: <LibraryPage />
+              },
+              {
+                path: "add",
+                element: <AddPaperPage />
+              }
+            ]
+          }
+        ]
+      },
+      {
+        path: "*",
+        element: <FallbackRoute />
+      }
+    ]
+  }
+])
+
 export default function App() {
-  const { isAuthenticated, isReady } = useAuth()
+  return <RouterProvider router={router} fallbackElement={<AppLoadingScreen />} />
+}
+
+function AuthReadyLayout() {
+  const { isReady } = useAuth()
 
   if (!isReady) {
     return <AppLoadingScreen />
@@ -29,30 +71,31 @@ export default function App() {
 
   return (
     <Suspense fallback={<AppLoadingScreen />}>
-      <Routes>
-        <Route
-          path="/auth"
-          element={isAuthenticated ? <Navigate to="/" replace /> : <AuthPage />}
-        />
-        <Route element={<ProtectedLayout isAuthenticated={isAuthenticated} />}>
-          <Route element={<AppShell />}>
-            <Route path="/" element={<AnalyticsPage />} />
-            <Route path="/library" element={<LibraryPage />} />
-            <Route path="/add" element={<AddPaperPage />} />
-          </Route>
-        </Route>
-        <Route path="*" element={<Navigate to={isAuthenticated ? "/" : "/auth"} replace />} />
-      </Routes>
+      <Outlet />
     </Suspense>
   )
 }
 
-function ProtectedLayout({ isAuthenticated }: { isAuthenticated: boolean }) {
+function AuthRoute() {
+  const { isAuthenticated } = useAuth()
+
+  return isAuthenticated ? <Navigate to="/" replace /> : <AuthPage />
+}
+
+function ProtectedLayout() {
+  const { isAuthenticated } = useAuth()
+
   if (!isAuthenticated) {
     return <Navigate to="/auth" replace />
   }
 
   return <Outlet />
+}
+
+function FallbackRoute() {
+  const { isAuthenticated } = useAuth()
+
+  return <Navigate to={isAuthenticated ? "/" : "/auth"} replace />
 }
 
 function AppLoadingScreen() {

@@ -1,4 +1,12 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react"
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode
+} from "react"
 import {
   logoutSession,
   refreshSession,
@@ -31,6 +39,8 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<StoredSession | null>(null)
   const [isReady, setIsReady] = useState(false)
+  const activeRefreshToken = session?.refreshToken
+  const activeUser = session?.user ?? null
 
   useEffect(() => {
     const raw = window.localStorage.getItem(STORAGE_KEY)
@@ -46,6 +56,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsReady(true)
   }, [])
 
+  const persistSession = useCallback((token: string, refreshToken: string, user: User) => {
+    const nextSession = { token, refreshToken, user }
+    setApiAuthToken(token)
+    setSession(nextSession)
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSession))
+  }, [])
+
+  const clearSessionLocally = useCallback(async () => {
+    window.localStorage.removeItem(STORAGE_KEY)
+    setApiAuthToken(null)
+    setSession(null)
+  }, [])
+
+  const login = useCallback(async (input: { email: string; password: string }) => {
+    const auth = await signIn(input)
+    persistSession(auth.token, auth.refreshToken, auth.user)
+  }, [persistSession])
+
+  const signup = useCallback(async (input: { fullName: string; email: string; password: string }) => {
+    const auth = await signUp(input)
+    persistSession(auth.token, auth.refreshToken, auth.user)
+  }, [persistSession])
+
+  const logout = useCallback(async () => {
+    await clearSessionLocally()
+
+    if (activeRefreshToken) {
+      try {
+        await logoutSession({ refreshToken: activeRefreshToken })
+      } catch {
+        // Local sign-out takes priority if the network is unavailable.
+      }
+    }
+  }, [activeRefreshToken, clearSessionLocally])
+
+  const handleRefresh = useCallback(async () => {
+    if (!activeRefreshToken) {
+      await clearSessionLocally()
+      return null
+    }
+
+    try {
+      const auth = await refreshSession({ refreshToken: activeRefreshToken })
+      persistSession(auth.token, auth.refreshToken, auth.user)
+      return auth.token
+    } catch {
+      await clearSessionLocally()
+      return null
+    }
+  }, [activeRefreshToken, clearSessionLocally, persistSession])
+
   useEffect(() => {
     setUnauthorizedHandler(() => {
       void clearSessionLocally()
@@ -55,70 +116,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUnauthorizedHandler(null)
       setRefreshHandler(null)
     }
-  }, [session])
-
-  async function login(input: { email: string; password: string }) {
-    const auth = await signIn(input)
-    persistSession(auth.token, auth.refreshToken, auth.user)
-  }
-
-  async function signup(input: { fullName: string; email: string; password: string }) {
-    const auth = await signUp(input)
-    persistSession(auth.token, auth.refreshToken, auth.user)
-  }
-
-  async function logout() {
-    const refreshToken = session?.refreshToken
-    await clearSessionLocally()
-
-    if (refreshToken) {
-      try {
-        await logoutSession({ refreshToken })
-      } catch {
-        // Local sign-out takes priority if the network is unavailable.
-      }
-    }
-  }
-
-  async function handleRefresh() {
-    if (!session?.refreshToken) {
-      await clearSessionLocally()
-      return null
-    }
-
-    try {
-      const auth = await refreshSession({ refreshToken: session.refreshToken })
-      persistSession(auth.token, auth.refreshToken, auth.user)
-      return auth.token
-    } catch {
-      await clearSessionLocally()
-      return null
-    }
-  }
-
-  async function clearSessionLocally() {
-    window.localStorage.removeItem(STORAGE_KEY)
-    setApiAuthToken(null)
-    setSession(null)
-  }
-
-  function persistSession(token: string, refreshToken: string, user: User) {
-    const nextSession = { token, refreshToken, user }
-    setApiAuthToken(token)
-    setSession(nextSession)
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSession))
-  }
+  }, [clearSessionLocally, handleRefresh])
 
   const value = useMemo(
     () => ({
-      user: session?.user ?? null,
-      isAuthenticated: Boolean(session?.user),
+      user: activeUser,
+      isAuthenticated: Boolean(activeUser),
       isReady,
       login,
       signup,
       logout
     }),
-    [session, isReady]
+    [activeUser, isReady, login, logout, signup]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

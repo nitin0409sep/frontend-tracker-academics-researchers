@@ -3,6 +3,7 @@ import { StatCard } from "@/features/analytics/components/stat-card"
 import { EmptyState } from "@/shared/components/empty-state"
 import { SectionHeading } from "@/shared/components/section-heading"
 import { Card } from "@/shared/components/ui/card"
+import { Skeleton } from "@/shared/components/ui/skeleton"
 import { useAnalytics } from "@/features/analytics/hooks/use-analytics"
 
 export function AnalyticsPage() {
@@ -15,8 +16,20 @@ export function AnalyticsPage() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <Card className="h-40 animate-pulse bg-white/60" />
-        <Card className="h-80 animate-pulse bg-white/60" />
+        <Card className="space-y-5">
+          <Skeleton className="h-3 w-28 rounded-full" />
+          <Skeleton className="h-8 w-full max-w-lg" />
+          <Skeleton className="h-4 w-full max-w-2xl" />
+          <div className="grid gap-4 pt-2 sm:grid-cols-3">
+            <Skeleton className="h-20" />
+            <Skeleton className="h-20" />
+            <Skeleton className="h-20" />
+          </div>
+        </Card>
+        <Card className="space-y-4">
+          <Skeleton className="h-5 w-48" />
+          <Skeleton className="h-64 w-full" />
+        </Card>
       </div>
     )
   }

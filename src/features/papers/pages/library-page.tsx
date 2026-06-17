@@ -7,6 +7,7 @@ import { PaperTable } from "@/features/papers/components/paper-table"
 import { SectionHeading } from "@/shared/components/section-heading"
 import { Button } from "@/shared/components/ui/button"
 import { Card } from "@/shared/components/ui/card"
+import { Skeleton } from "@/shared/components/ui/skeleton"
 import { datePresets } from "@/shared/lib/constants"
 import type { PaperFilters } from "@/shared/lib/types"
 import { usePapers } from "@/features/papers/hooks/use-papers"
@@ -79,7 +80,15 @@ export function LibraryPage() {
           ) : loading ? (
             <div className="grid gap-4">
               {Array.from({ length: 3 }).map((_, index) => (
-                <Card key={index} className="h-28 animate-pulse bg-white/60" />
+                <Card key={index} className="space-y-4">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                  <div className="flex flex-wrap gap-3 pt-2">
+                    <Skeleton className="h-8 w-24 rounded-full" />
+                    <Skeleton className="h-8 w-28 rounded-full" />
+                    <Skeleton className="h-8 w-20 rounded-full" />
+                  </div>
+                </Card>
               ))}
             </div>
           ) : papers.length === 0 ? (

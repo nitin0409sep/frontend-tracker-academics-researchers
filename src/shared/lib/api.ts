@@ -26,6 +26,10 @@ async function handleResponse<T>(response: Response): Promise<T> {
     throw new Error(payload?.message ?? "Something went wrong")
   }
 
+  if (response.status === 204) {
+    return null as T
+  }
+
   return response.json() as Promise<T>
 }
 
